@@ -6,3 +6,4 @@ dist
 bplustree.egg-info
 .coverage
 .pytest_cache
+env/
