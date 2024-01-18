@@ -12,7 +12,7 @@ def clean_file():
         os.unlink(filename)
     if os.path.isfile(filename + '-wal'):
         os.unlink(filename + '-wal')
-    yield
+    yield # return/resume point 
     if os.path.isfile(filename):
         os.unlink(filename)
     if os.path.isfile(filename + '-wal'):

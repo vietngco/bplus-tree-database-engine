@@ -61,20 +61,20 @@ def test_insert_setitem_tree(b):
 
     with pytest.raises(ValueError):
         b.insert(1, b'bar')
-    assert b.get(1) == b'foo'
+    assert b.get_record(1) == b'foo'
 
     b.insert(1, b'baz', replace=True)
-    assert b.get(1) == b'baz'
+    assert b.get_record(1) == b'baz'
 
     b[1] = b'foo'
-    assert b.get(1) == b'foo'
+    assert b.get_record(1) == b'foo'
 
 
 def test_get_tree(b):
     b.insert(1, b'foo')
-    assert b.get(1) == b'foo'
-    assert b.get(2) is None
-    assert b.get(2, 'bar') == 'bar'
+    assert b.get_record(1) == b'foo'
+    assert b.get_record(2) is None
+    assert b.get_record(2, 'bar') == 'bar'
 
 
 def test_getitem_tree(b):
@@ -358,8 +358,8 @@ def test_batch_insert(b):
 def test_batch_insert_no_in_order(b):
     with pytest.raises(ValueError):
         b.batch_insert([(2, b'2'), (1, b'1')])
-    assert b.get(1) is None
-    assert b.get(2) is None
+    assert b.get_record(1) is None
+    assert b.get_record(2) is None
 
     b.insert(2, b'2')
     with pytest.raises(ValueError):
@@ -368,8 +368,8 @@ def test_batch_insert_no_in_order(b):
     with pytest.raises(ValueError):
         b.batch_insert([(2, b'2')])
 
-    assert b.get(1) is None
-    assert b.get(2) == b'2'
+    assert b.get_record(1) is None
+    assert b.get_record(2) == b'2'
 
 def test_get_next_page(b): 
     b.batch_insert([(i, b'foo') for i  in range(100)])
