@@ -48,9 +48,11 @@ for key, value  in employee_json.items():
     pass 
 
 # close the db 
-employee.get_by_key(">", 1)
+# records  = employee.get_by_key(">", 3)
+# print(records)
 employee.tree.close()
 
 
 
- 
+# header: node_type + used_page_length + page_reference_byte 
+# body : 
