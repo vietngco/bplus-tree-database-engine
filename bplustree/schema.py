@@ -147,9 +147,9 @@ class Schema:
         record = self.deserialize_record(record_bytes)
         return record
         
-    # case that we have single column index 
+    # any get function should be block with read access for entire during of transaction
     def get_by_key(self, operator, value) -> list: # target column, operator, value
-        key_col = self.col_dict[self.key_col]
+        key_col = self.col_dict[self.key_col]  
 
         if operator == "=":
             # just return one value 
@@ -157,24 +157,10 @@ class Schema:
             return [self.deserialize_record(record)]
         elif operator == ">":
             # start from the left and go to the next node 
-            first_node = self.tree.get_node(value, default=None) # return byte 
-            if first_node is None: 
-                return []
-            records = []
-            # process the first node
-            for record in first_node.entries:
-                if record.key > value: 
-                    records.append( self.deserialize_record(record.value))
-
-            
-            if first_node.next_page is not None: # move to the right 
-                print ("next page first node", first_node.next_page )
-                # first_node = first_node.next_node
-                # for key, value in first_node.entries: 
-                #     records.append( self.deserialize_record(value))
+            records = self.tree.get_by_key(">", value)
+            for i, record in enumerate(records): 
+                records[i]= self.deserialize_record(record)
             return records
-
-                
             
         elif operator == "<":
             # start from the right node and go to the previous node
