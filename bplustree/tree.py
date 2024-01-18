@@ -383,7 +383,8 @@ class BPlusTree:
         )
 
         # Get the next node to point back to the new node
-        self._mem.get_node(old_node.next_page).prev_page = new_node.page
+        if old_node.next_page is not None:
+            self._mem.get_node(old_node.next_page).prev_page = new_node.page
 
         new_entries = old_node.split_entries()
         new_node.entries = new_entries

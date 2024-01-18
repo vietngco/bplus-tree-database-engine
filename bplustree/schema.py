@@ -141,7 +141,7 @@ class Schema:
     def get(self, key) -> dict:
         # find the key that match, may hvae scan the whole tree if hte column is not indexed
         
-        record_bytes = self.tree.get(key)
+        record_bytes = self.tree.get_record(key)
         if record_bytes is None:
             return None
         record = self.deserialize_record(record_bytes)
@@ -153,7 +153,7 @@ class Schema:
 
         if operator == "=":
             # just return one value 
-            record = self.tree.get(value)
+            record = self.tree.get_record(value)
             return [self.deserialize_record(record)]
         elif operator == ">":
             # start from the left and go to the next node 
