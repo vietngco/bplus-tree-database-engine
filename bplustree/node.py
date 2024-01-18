@@ -10,7 +10,7 @@ from .entry import Entry, Record, Reference, OpaqueData
 
 class Node(metaclass=abc.ABCMeta):
 
-    __slots__ = ['_tree_conf', 'entries', 'page', 'parent', 'next_page']
+    __slots__ = ['_tree_conf', 'entries', 'page', 'parent', 'next_page', 'prev_page']
 
     # Attributes to redefine in inherited classes
     _node_type_int = 0
@@ -19,12 +19,13 @@ class Node(metaclass=abc.ABCMeta):
     _entry_class = None
 
     def __init__(self, tree_conf: TreeConf, data: Optional[bytes]=None,
-                 page: int=None, parent: 'Node'=None, next_page: int=None):
+                 page: int=None, parent: 'Node'=None, next_page: int=None, prev_page: int=None):
         self._tree_conf = tree_conf
         self.entries = list()
         self.page = page
         self.parent = parent
         self.next_page = next_page
+        self.prev_page = prev_page
         if data:
             self.load(data)
 
@@ -35,11 +36,22 @@ class Node(metaclass=abc.ABCMeta):
             data[NODE_TYPE_BYTES:end_used_page_length], ENDIAN
         )
         end_header = end_used_page_length + PAGE_REFERENCE_BYTES
+        # read next page
         self.next_page = int.from_bytes(
             data[end_used_page_length:end_header], ENDIAN
         )
         if self.next_page == 0:
             self.next_page = None
+
+        # read prev page
+        self.prev_page = int.from_bytes(
+            data[end_header:end_header+PAGE_REFERENCE_BYTES], ENDIAN
+        )
+        if self.prev_page == 0:
+            self.prev_page = None
+
+        end_header = end_header + PAGE_REFERENCE_BYTES
+
 
         if self._entry_class is None:
             # For Nodes that cannot hold Entries
@@ -64,22 +76,27 @@ class Node(metaclass=abc.ABCMeta):
 
         # used_page_length = len(header) + len(data), but the header is
         # generated later
+        # header = note_type + used_page_length + next_page + prev_page
         used_page_length = len(data) + 4 + PAGE_REFERENCE_BYTES
         assert 0 < used_page_length <= self._tree_conf.page_size
         assert len(data) <= self.max_payload
 
         next_page = 0 if self.next_page is None else self.next_page
+        prev_page = 0 if self.prev_page is None else self.prev_page
+
         header = (
             self._node_type_int.to_bytes(1, ENDIAN) +
             used_page_length.to_bytes(3, ENDIAN) +
-            next_page.to_bytes(PAGE_REFERENCE_BYTES, ENDIAN)
+            next_page.to_bytes(PAGE_REFERENCE_BYTES, ENDIAN) + 
+            prev_page.to_bytes(PAGE_REFERENCE_BYTES, ENDIAN)
         )
 
         data = bytearray(header) + data
 
+        # Pad the page with null bytes to fill the page
         padding = self._tree_conf.page_size - used_page_length
         assert padding >= 0
-        data.extend(bytearray(padding))
+        data.extend(bytearray(padding)) # fixed page size
         assert len(data) == self._tree_conf.page_size
 
         return data
@@ -200,9 +217,9 @@ class RecordNode(Node):
     __slots__ = ['_entry_class']
 
     def __init__(self, tree_conf: TreeConf, data: Optional[bytes]=None,
-                 page: int=None, parent: 'Node'=None, next_page: int=None):
+                 page: int=None, parent: 'Node'=None, next_page: int=None, prev_page: int=None):
         self._entry_class = Record
-        super().__init__(tree_conf, data, page, parent, next_page)
+        super().__init__(tree_conf, data, page, parent, next_page, prev_page)
 
 
 class LonelyRootNode(RecordNode):
@@ -232,11 +249,11 @@ class LeafNode(RecordNode):
     __slots__ = ['_node_type_int', 'min_children', 'max_children']
 
     def __init__(self, tree_conf: TreeConf, data: Optional[bytes]=None,
-                 page: int=None, parent: 'Node'=None, next_page: int=None):
+                 page: int=None, parent: 'Node'=None, next_page: int=None, prev_page: int=None):
         self._node_type_int = 4
         self.min_children = math.ceil(tree_conf.order / 2) - 1
         self.max_children = tree_conf.order - 1
-        super().__init__(tree_conf, data, page, parent, next_page)
+        super().__init__(tree_conf, data, page, parent, next_page, prev_page)
 
 
 class ReferenceNode(Node):
@@ -305,16 +322,16 @@ class OverflowNode(Node):
     """Node that holds a single Record value too large for its Node."""
 
     def __init__(self, tree_conf: TreeConf, data: Optional[bytes]=None,
-                 page: int=None, next_page: int=None):
+                 page: int=None, next_page: int=None, prev_page: int=None):
         self._node_type_int = 5
         self.max_children = 1
         self.min_children = 1
         self._entry_class = OpaqueData
-        super().__init__(tree_conf, data, page, next_page=next_page)
+        super().__init__(tree_conf, data, page, next_page=next_page, prev_page=prev_page)
 
     def __repr__(self):
-        return '<{}: page={} next_page={}>'.format(
-            self.__class__.__name__, self.page, self.next_page
+        return '<{}: page={} next_page={} prev_page={}>'.format(
+            self.__class__.__name__, self.page, self.next_page, self.prev_page
         )
 
 
@@ -329,6 +346,6 @@ class FreelistNode(Node):
         super().__init__(tree_conf, data, page, next_page=next_page)
 
     def __repr__(self):
-        return '<{}: page={} next_page={}>'.format(
-            self.__class__.__name__, self.page, self.next_page
+        return '<{}: page={} next_page={} prev_page={}>'.format(
+            self.__class__.__name__, self.page, self.next_page, self.prev_page
         )
