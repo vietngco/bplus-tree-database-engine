@@ -175,6 +175,26 @@ class BPlusTree:
             node = self._search_in_tree(key, self._root_node)
             return node
         
+    def get_by_key(self, operator, value) -> list: # target column, operator, value
+        with self._mem.read_transaction:
+            if  operator == "=":
+                record = self.get(value)
+                return [record] # in bytes 
+            elif operator == ">": 
+                node = self._search_in_tree(value, self._root_node)
+                records = []
+                for record in node.entries:
+                    if record.key > value: 
+                        records.append( self._get_value_from_record(record))
+                while node.next_page is not None:
+                    node = self._mem.get_node(node.next_page)
+                    for record in node.entries:
+                        if record.key > value: 
+                            records.append( self._get_value_from_record(record))
+                return records                
+            else: 
+                raise ValueError("Not supported operator")
+        
     def __contains__(self, item):
         with self._mem.read_transaction:
             o = object()
