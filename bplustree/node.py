@@ -79,8 +79,6 @@ class Node(metaclass=abc.ABCMeta):
         # header = note_type + used_page_length + next_page + prev_page
         
         used_page_length = USED_HEADER_PAGE_LENGTH + len(data)
-        print("used_page_length", used_page_length)
-        print("self._tree_conf.page_size", self._tree_conf.page_size)
         assert 0 < used_page_length 
         assert used_page_length <= self._tree_conf.page_size
         assert len(data) <= self.max_payload
