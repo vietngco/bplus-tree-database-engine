@@ -170,6 +170,11 @@ class BPlusTree:
                 assert isinstance(rv, bytes)
                 return rv
 
+    def get_node (self, key, default=None) -> Node:
+        with self._mem.read_transaction:
+            node = self._search_in_tree(key, self._root_node)
+            return node
+        
     def __contains__(self, item):
         with self._mem.read_transaction:
             o = object()
