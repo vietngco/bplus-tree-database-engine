@@ -7,3 +7,4 @@ bplustree.egg-info
 .coverage
 .pytest_cache
 env/
+.vscode/
