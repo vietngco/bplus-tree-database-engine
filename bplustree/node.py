@@ -4,7 +4,7 @@ import math
 from typing import Optional
 
 from .const import (ENDIAN, NODE_TYPE_BYTES, USED_PAGE_LENGTH_BYTES,
-                    PAGE_REFERENCE_BYTES, TreeConf)
+                    PAGE_REFERENCE_BYTES, TreeConf, USED_HEADER_PAGE_LENGTH)
 from .entry import Entry, Record, Reference, OpaqueData
 
 
@@ -77,16 +77,20 @@ class Node(metaclass=abc.ABCMeta):
         # used_page_length = len(header) + len(data), but the header is
         # generated later
         # header = note_type + used_page_length + next_page + prev_page
-        used_page_length = len(data) + 4 + PAGE_REFERENCE_BYTES
-        assert 0 < used_page_length <= self._tree_conf.page_size
+        
+        used_page_length = USED_HEADER_PAGE_LENGTH + len(data)
+        print("used_page_length", used_page_length)
+        print("self._tree_conf.page_size", self._tree_conf.page_size)
+        assert 0 < used_page_length 
+        assert used_page_length <= self._tree_conf.page_size
         assert len(data) <= self.max_payload
 
         next_page = 0 if self.next_page is None else self.next_page
         prev_page = 0 if self.prev_page is None else self.prev_page
 
         header = (
-            self._node_type_int.to_bytes(1, ENDIAN) +
-            used_page_length.to_bytes(3, ENDIAN) +
+            self._node_type_int.to_bytes(NODE_TYPE_BYTES, ENDIAN) +
+            used_page_length.to_bytes(USED_PAGE_LENGTH_BYTES, ENDIAN) +
             next_page.to_bytes(PAGE_REFERENCE_BYTES, ENDIAN) + 
             prev_page.to_bytes(PAGE_REFERENCE_BYTES, ENDIAN)
         )
@@ -105,7 +109,7 @@ class Node(metaclass=abc.ABCMeta):
     def max_payload(self) -> int:
         """Size in bytes of serialized payload a Node can carry."""
         return (
-            self._tree_conf.page_size - 4 - PAGE_REFERENCE_BYTES
+            self._tree_conf.page_size - USED_HEADER_PAGE_LENGTH
         )
 
     @property

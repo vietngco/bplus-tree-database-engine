@@ -26,6 +26,7 @@ FRAME_TYPE_BYTES = 1
 # Bytes used for storing general purpose integers like file metadata
 OTHERS_BYTES = 4
 
+USED_HEADER_PAGE_LENGTH = NODE_TYPE_BYTES + USED_PAGE_LENGTH_BYTES + PAGE_REFERENCE_BYTES * 2
 
 TreeConf = namedtuple('TreeConf', [
     'page_size',   # Size of a page within the tree in bytes
