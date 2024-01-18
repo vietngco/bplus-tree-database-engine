@@ -80,3 +80,24 @@ class DatetimeUTCSerializer(Serializer):
         rv = temporenc.unpackb(data).datetime()
         rv = rv.replace(tzinfo=timezone.utc)
         return rv
+
+class FloatSerializer(Serializer):
+
+    __slots__ = []
+
+    def serialize(self, obj: float, key_size: int) -> bytes:
+        return obj.to_bytes(key_size, ENDIAN)
+
+    def deserialize(self, data: bytes) -> float:
+        return float.from_bytes(data, ENDIAN)
+    
+
+class BooleanSerializer(Serializer):
+    __slots__ = []
+
+    def serialize(self, obj: bool, key_size: int) -> bytes:
+        return int(obj).to_bytes(key_size, ENDIAN)
+
+    def deserialize(self, data: bytes) -> bool:
+        return bool(int.from_bytes(data, ENDIAN))
+
