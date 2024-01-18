@@ -158,7 +158,7 @@ class BPlusTree:
             if node is not None:
                 self._mem.set_node(node)
 
-    def get(self, key, default=None) -> bytes:
+    def get_record(self, key, default=None) -> bytes:
         with self._mem.read_transaction:
             node = self._search_in_tree(key, self._root_node)
             try:
@@ -178,7 +178,7 @@ class BPlusTree:
     def get_by_key(self, operator, value) -> list: # target column, operator, value
         with self._mem.read_transaction:
             if  operator == "=":
-                record = self.get(value)
+                record = self.get_record(value)
                 return [record] # in bytes 
             elif operator == ">": 
                 node = self._search_in_tree(value, self._root_node)
@@ -198,7 +198,7 @@ class BPlusTree:
     def __contains__(self, item):
         with self._mem.read_transaction:
             o = object()
-            return False if self.get(item, default=o) is o else True
+            return False if self.get_record(item, default=o) is o else True
 
     def __setitem__(self, key, value):
         self.insert(key, value, replace=True)
@@ -216,7 +216,7 @@ class BPlusTree:
                 return rv
 
             else:
-                rv = self.get(item)
+                rv = self.get_record(item)
                 if rv is None:
                     raise KeyError(item)
                 return rv
@@ -361,11 +361,18 @@ class BPlusTree:
         child_node.parent = node
         return self._search_in_tree(key, child_node)
 
+    # When split the leaf 
+    #  Make sure  (<-> old_node <-> next_node <->) 
+    #  =>> (<-> old_node <-> new_node <-> next_node <->)
     def _split_leaf(self, old_node: 'Node'):
         """Split a leaf Node to allow the tree to grow."""
         parent = old_node.parent
         new_node = self.LeafNode(page=self._mem.next_available_page,
                                  next_page=old_node.next_page)
+        
+        # Get the next node to point back to the new node 
+        self._mem.get_node(old_node.next_page).prev_page = new_node.page
+
         new_entries = old_node.split_entries()
         new_node.entries = new_entries
         ref = self.Reference(new_node.smallest_key,
@@ -383,6 +390,7 @@ class BPlusTree:
             self._split_parent(parent)
 
         old_node.next_page = new_node.page
+        new_node.prev_page = old_node.page
 
         self._mem.set_node(old_node)
         self._mem.set_node(new_node)
