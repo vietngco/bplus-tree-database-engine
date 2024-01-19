@@ -372,11 +372,19 @@ def test_batch_insert_no_in_order(b):
     assert b.get_record(2) == b'2'
 
 def test_get_next_page(b): 
-    b.batch_insert([(i, b'foo') for i  in range(100)])
+    b.batch_insert([(i, str(i).encode()) for i in range(100)])
     first_node =  b.get_node(0)
-    assert first_node.page == 1
+    assert first_node.page == 1 
     assert first_node.prev_page is None
     assert first_node.next_page == 2
+
+    cur_keys = []
+    for entry in first_node.entries:
+        cur_keys.append(entry.key) 
     next_node = b._mem.get_node(first_node.next_page)
-    assert next_node.page == 2
-    assert next_node.prev_page == 1
+
+    prev_node = b._mem.get_node(next_node.prev_page)
+    prev_keys = []
+    for entry in prev_node.entries:
+        prev_keys.append(entry.key) 
+    assert cur_keys == prev_keys
