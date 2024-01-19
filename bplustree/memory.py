@@ -196,6 +196,7 @@ class FileMemory:
         return WriteTransaction()
 
     @property
+    # Lazy loading
     def next_available_page(self) -> int:
         last_freelist_page = self._pop_from_freelist()
         if last_freelist_page is not None:
