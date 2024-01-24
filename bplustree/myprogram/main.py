@@ -4,12 +4,6 @@ import uuid
 from bplustree.schema import Schema
 from bplustree.column import IntCol, StrCol, BoolCol, FloatCol, DateTimeCol
 
-
-
-
-
-
-# test the schema
 def get_cols() -> list:
     id_col = IntCol("id", unique=True, nullable=False) # 8 
     name_col = StrCol("name", 20) # 28 
@@ -49,6 +43,7 @@ def primary_check():
 def check_get_range(): 
     records  = employee.get_records(">", 3) # should return more than 10 reocords 
     return records
+
 def print_record(record):
     print("id", record["id"])
     print("name", record["name"])
@@ -63,9 +58,6 @@ records = check_get_range()
 print("len of recoreds", len(records))
 for record in records:
     print_record(record)
-employee._tree.close()
 
-
-
-# header: node_type + used_page_length + page_reference_byte 
-# body : 
+# close 
+employee.close()

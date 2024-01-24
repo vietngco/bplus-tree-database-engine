@@ -75,27 +75,29 @@ class Schema:
                     raise ValueError("Data type is not correct")
             else:
                 raise ValueError("Data type is not correct")
+
     def serilize_record(self, data: dict) -> bytes:
         # data = {"id": 1, "name": "John", "is_active": True, "salary": 1000.0, "created_at": datetime.datetime.now()}
         # use column length to serilize the data
         # return b'1JohnTrue1000.0'
-        bytes = b''
-        for col in self.columns: 
-            length = col.get_length() 
+        bytes = b""
+        for col in self.columns:
+            length = col.get_length()
             if col.type == "int":
                 bytes += data[col.name].to_bytes(length, "big")
             elif col.type == "string":
                 bytes += data[col.name].encode("utf-8")
-                bytes += b' ' * (length - len(data[col.name]))
+                bytes += b" " * (length - len(data[col.name]))
             elif col.type == "boolean":
                 bytes += int(data[col.name]).to_bytes(length, "big")
             elif col.type == "float":
-                  bytes += struct.pack('d', data[col.name])
+                bytes += struct.pack("d", data[col.name])
             elif col.type == "datetime":
                 bytes += data[col.name].strftime("%Y-%m-%d %H:%M:%S").encode("utf-8")
             else:
                 raise ValueError("Data type is not correct")
         return bytes
+
     def deserialize_record(self, bytes: bytes) -> dict:
         # byte value b'1JohnTrue1000.0'
         # reurn data = {"id": 1, "name": "John", "is_active": True, "salary": 1000.0, "created_at": datetime.datetime.now()}
@@ -104,70 +106,88 @@ class Schema:
         for col in self.columns:
             length = col.get_length()
             if col.type == "int":
-                data[col.name] = int.from_bytes(bytes[start:start+length], "big")
+                data[col.name] = int.from_bytes(bytes[start : start + length], "big")
             elif col.type == "string":
-                data[col.name] = bytes[start:start+length].decode("utf-8").strip()
+                data[col.name] = bytes[start : start + length].decode("utf-8").strip()
             elif col.type == "boolean":
-                data[col.name] = bool.from_bytes(bytes[start:start+length], "big")
+                data[col.name] = bool.from_bytes(bytes[start : start + length], "big")
             elif col.type == "float":
-                data[col.name] = struct.unpack('d', bytes[start:start+length])[0]
+                data[col.name] = struct.unpack("d", bytes[start : start + length])[0]
             elif col.type == "datetime":
-                data[col.name] = datetime.datetime.strptime(bytes[start:start+length].decode("utf-8"), "%Y-%m-%d %H:%M:%S")
+                data[col.name] = datetime.datetime.strptime(
+                    bytes[start : start + length].decode("utf-8"), "%Y-%m-%d %H:%M:%S"
+                )
             else:
                 raise ValueError("Data type is not correct")
             start += length
         return data
-    
-    def insert(self, data: dict):
-        # data = {"id": 1, "name": "John", "is_active": True, "salary": 1000.0, "created_at": datetime.datetime.now()}
-        # validating 
+
+    def _serlize_validate_data(self, data: dict):
         self._assign_default_value(data)
         self._validate_not_null_cols(data)
         self._validate_data_is_valid(data)
-        # serlaize the data
+
         byte_record = self.serilize_record(data)
-        if len(byte_record) != self.record_length and len(byte_record)!= self._tree._tree_conf.value_size :
-            raise ValueError("Something wrong with the serlization, Data length is not correct")
-        # get the key index 
+        if (
+            len(byte_record) != self.record_length
+            and len(byte_record) != self._tree._tree_conf.value_size
+        ):
+            raise ValueError(
+                "Something wrong with the serlization, Data length is not correct"
+            )
+        # get the key index
         key_value = data[self.key_col]
-        if (key_value is None):
+        if key_value is None:
             raise ValueError("Key value is None")
         if not isinstance(key_value, int):
             raise ValueError("not supported yet for other key type which is not int")
-        # insert into the tree
+        return key_value, byte_record
+
+    def batch_insert(self, data_list: list[dict]):
+        """Insert many records at once"""
+        for i, data in enumerate(data_list):
+            key_value, byte_record = self._serlize_validate_data(data)
+            data_list[i] = (key_value, byte_record)
+        # serlaize the data
+        self._tree.batch_insert(data_list)
+
+    def insert(self, data: dict):
+        key_value, byte_record = self._serlize_validate_data(data)
         self._tree.insert(key_value, byte_record)
-        
 
     def get_record(self, key) -> dict:
         # find the key that match, may hvae scan the whole tree if hte column is not indexed
-        
+
         record_bytes = self._tree.get_record(key)
         if record_bytes is None:
             return None
         record = self.deserialize_record(record_bytes)
         return record
-        
+
     # any get function should be block with read access for entire during of transaction
-    def get_records(self, operator, value) -> list: # target column, operator, value
-        key_col = self.col_dict[self.key_col]  
+    def get_records(self, operator, value) -> list:  # target column, operator, value
+        key_col = self.col_dict[self.key_col]
         records = []
         if operator == "=":
-            # just return one value 
-            record = self._tree.get_record(value) # get single record 
+            # just return one value
+            record = self._tree.get_record(value)  # get single record
             records.append(record)
-        else: 
+        else:
             records = self._tree.get_records(operator, value)
-            
-        for  i, record  in enumerate( records): 
+
+        for i, record in enumerate(records):
             records[i] = self.deserialize_record(record)
         return records
 
-    def update(self, key, data): # will be set of column and value that need to be updated but not hte index key 
+    def update(
+        self, key, data
+    ):  # will be set of column and value that need to be updated but not hte index key
         pass
 
     def delete(self, key):
         pass
-    def close(self): 
+
+    def close(self):
         self._tree.close()
 
 

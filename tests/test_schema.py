@@ -1,19 +1,6 @@
-from datetime import datetime, timezone, timedelta
-import itertools
-from unittest import mock
-import uuid
-
 import pytest
+from datetime import datetime
 
-from bplustree.memory import FileMemory
-from bplustree.node import LonelyRootNode, LeafNode
-from bplustree.tree import BPlusTree
-from bplustree.serializer import (
-    IntSerializer,
-    StrSerializer,
-    UUIDSerializer,
-    DatetimeUTCSerializer,
-)
 from .conftest import schema_name
 from bplustree.schema import Schema
 from bplustree.column import IntCol, StrCol, BoolCol, FloatCol, DateTimeCol
@@ -31,7 +18,22 @@ def get_cols() -> list:
 
     columns = [id_col, name_col, is_active_col, salary_col, created_at_col, note]
     return columns
-
+def get_data_to_insert(a,b): 
+    data = []
+    if a >= b: 
+        raise ValueError("a should be less than b")
+    for i in range(a, b):
+        data.append(
+            {
+                "id": i,
+                "name": "John Doe" + str(i),
+                "is_active": True,
+                "salary": 1000.0 + i,
+                "created_at": datetime.now(),
+                "note": "test" + str(i),
+            }
+        )
+    return data
 
 @pytest.fixture
 def s():
@@ -67,17 +69,7 @@ def test_insert_data(s):
 
 
 def test_get_data(s):
-    for i in range(10, 20):
-        s.insert(
-            {
-                "id": i,
-                "name": "John Doe" + str(i),
-                "is_active": True,
-                "salary": 1000.0 + i,
-                "created_at": datetime.now(),
-                "note": "test" + str(i),
-            }
-        )
+    s.batch_insert(get_data_to_insert(10, 20))
     assert len(s._tree) == 10
     record = s.get_record(10)
     assert record["id"] == 10
@@ -88,19 +80,17 @@ def test_get_data(s):
 
 
 def test_get_range(s):
-    for i in range(0, 10):
-        s.insert(
-            {
-                "id": i,
-                "name": "John Doe" + str(i),
-                "is_active": True,
-                "salary": 1000.0 + i,
-                "created_at": datetime.now(),
-                "note": "test" + str(i),
-            }
-        )
+    s.batch_insert(get_data_to_insert(0, 10))
     assert len(s._tree) == 10
     records = s.get_records(">", 3)
     assert len(records) == 6
     for record in records:
         assert record["id"] > 3
+
+def test_get_range_prev_page(s):
+    s.batch_insert(get_data_to_insert(0, 100))
+    assert len(s._tree) == 100
+    records = s.get_records("<", 3)
+    assert len(records) == 3
+    for record in records:
+        assert record["id"] < 3
