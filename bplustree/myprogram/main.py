@@ -24,32 +24,45 @@ def get_cols() -> list:
 
 columns = get_cols()
 employee = Schema(
-    table_name="employee4", columns=columns, key_col="id", custom_index=[], order=6
+    table_name="employee2", columns=columns, key_col="id", custom_index=[], order=5
 )
-# for i in range(100): 
-#     employee.insert(
-#         {
-#             "id": i,
-#             "name": "John Doe" + str(i),
-#             "is_active": True,
-#             "salary": 1000.0 + i,
-#             "created_at": datetime.datetime.now(),
-#             "note" : "test" + str(i)
-#         }
-#     )
+def insert_data():
+    for i in range(10, 20): 
+        employee.insert(
+            {
+                "id": i,
+                "name": "John Doe" + str(i),
+                "is_active": True,
+                "salary": 1000.0 + i,
+                "created_at": datetime.datetime.now(),
+                "note" : "test" + str(i)
+            }
+        )
+def primary_check():
+    for key, value in employee.tree.items(): 
+        # print("record", key, value)
+        pass 
+    print ("total lenght of the tree", len(employee.tree))
+    employee_json = employee.get_record(1)
+    return employee_json
 
-for key, value in employee.tree.items(): 
-    # print("record", key, value)
-    pass 
-employee_json = employee.get(1)
-# print("employee name", employee_json['name'])
-for key, value  in employee_json.items():
-    # print(key, ":",value)
-    pass 
-
-# close the db 
-# records  = employee.get_by_key(">", 3)
-# print(records)
+def check_get_range(): 
+    records  = employee.get_records(">", 3) # should return more than 10 reocords 
+    return records
+def print_record(record):
+    print("id", record["id"])
+    print("name", record["name"])
+    print("is_active", record["is_active"])
+    print("salary", record["salary"])
+    print("created_at", record["created_at"])
+    print("note", record["note"])
+    print("=====================================")
+# insert_data()
+single_record = primary_check()
+records = check_get_range()
+print("len of recoreds", len(records))
+for record in records:
+    print_record(record)
 employee.tree.close()
 
 

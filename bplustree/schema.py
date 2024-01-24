@@ -37,21 +37,21 @@ class Schema:
             self.table_name, self.columns
         )
 
-    def get_not_null_columns(self):
+    def _get_not_null_columns(self):
         return [col for col in self.columns if not col.nullable]
 
-    def assign_default_value(self, data: dict):
+    def _assign_default_value(self, data: dict):
         for col in self.columns:
             if col.name not in data or data[col.name] is None:
                 data[col.name] = col.default
 
-    def validate_not_null_cols(self, data: dict):
-        not_null_cols = self.get_not_null_columns()
+    def _validate_not_null_cols(self, data: dict):
+        not_null_cols = self._get_not_null_columns()
         for col in not_null_cols:
             if col.name not in data or data[col.name] is None:
                 raise ValueError("Column {} is not nullable".format(col.name))
 
-    def validate_data_is_valid(self, data: dict):
+    def _validate_data_is_valid(self, data: dict):
         # check type
         for col in self.columns:
             if col.name not in data:
@@ -121,9 +121,9 @@ class Schema:
     def insert(self, data: dict):
         # data = {"id": 1, "name": "John", "is_active": True, "salary": 1000.0, "created_at": datetime.datetime.now()}
         # validating 
-        self.assign_default_value(data)
-        self.validate_not_null_cols(data)
-        self.validate_data_is_valid(data)
+        self._assign_default_value(data)
+        self._validate_not_null_cols(data)
+        self._validate_data_is_valid(data)
         # serlaize the data
         byte_record = self.serilize_record(data)
         if len(byte_record) != self.record_length and len(byte_record)!= self.tree._tree_conf.value_size :
@@ -138,7 +138,7 @@ class Schema:
         self.tree.insert(key_value, byte_record)
         
 
-    def get(self, key) -> dict:
+    def get_record(self, key) -> dict:
         # find the key that match, may hvae scan the whole tree if hte column is not indexed
         
         record_bytes = self.tree.get_record(key)
@@ -148,34 +148,19 @@ class Schema:
         return record
         
     # any get function should be block with read access for entire during of transaction
-    def get_by_key(self, operator, value) -> list: # target column, operator, value
+    def get_records(self, operator, value) -> list: # target column, operator, value
         key_col = self.col_dict[self.key_col]  
-
+        records = []
         if operator == "=":
             # just return one value 
-            record = self.tree.get_record(value)
-            return [self.deserialize_record(record)]
-        elif operator == ">":
-            # start from the left and go to the next node 
-            records = self.tree.get_by_key(">", value)
-            for i, record in enumerate(records): 
-                records[i]= self.deserialize_record(record)
-            return records
+            record = self.tree.get_record(value) # get single record 
+            records.append(record)
+        else: 
+            records = self.tree.get_records(operator, value)
             
-        elif operator == "<":
-            # start from the right node and go to the previous node
-            last_node = self.tree.get_node(value, default=None)
-            if last_node is None: 
-                return []
-            records = []
-            for key, value in last_node.entries: 
-                records.append( self.deserialize_record(value))
-            # while last_node.previous_node is not None:
-            
-        elif operator == "<=": 
-            pass 
-        elif operator == ">=":
-            pass 
+        for  i, record  in enumerate( records): 
+            records[i] = self.deserialize_record(record)
+        return records
 
     def update(self, key, data): # will be set of column and value that need to be updated but not hte index key 
         pass

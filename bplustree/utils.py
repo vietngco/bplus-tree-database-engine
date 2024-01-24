@@ -8,7 +8,7 @@ def pairwise(iterable: Iterable):
     s -> (s0,s1), (s1,s2), (s2, s3), ...
     """
     a, b = itertools.tee(iterable)
-    next(b, None)
+    next(b, None) # always move one step ahead of a
     return zip(a, b)
 
 
@@ -29,3 +29,16 @@ def iter_slice(iterable: bytes, n: int):
         start = stop
         stop = start + n
         yield rv, start >= final_offset
+
+
+def get_ops( key, input_key, op) -> bool:
+        if op == "<": 
+            return key < input_key
+        elif op == ">": 
+            return key > input_key
+        elif op == "<=":
+            return key <= input_key
+        elif op == ">=":
+            return key >= input_key 
+        else:
+            raise ValueError("Not supported operator =")

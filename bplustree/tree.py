@@ -172,40 +172,64 @@ class BPlusTree:
     def get_record(self, key, default=None) -> bytes:
         with self._mem.read_transaction:
             node = self._search_in_tree(key, self._root_node)
-            try:
-                record = node.get_entry(key)
-            except ValueError:
-                return default
-            else:
-                rv = self._get_value_from_record(record)
-                assert isinstance(rv, bytes)
-                return rv
+            return self._get_record_in_node_with_key(node, key, default)
+    def _get_record_in_node_with_key(self, node, key, default=None):
+        try:
+            record = node.get_entry(key)
+        except ValueError:
+            return default
+        else:
+            rv = self._get_value_from_record(record)
+            assert isinstance(rv, bytes)
+            return rv
 
     def get_node(self, key, default=None) -> Node:
         with self._mem.read_transaction:
             node = self._search_in_tree(key, self._root_node)
             return node
 
-    def get_by_key(self, operator, value) -> list:  # target column, operator, value
+    def get_records(self, operator, input_key) -> list:
         with self._mem.read_transaction:
+            leafNode = self._search_in_tree(input_key, self._root_node)
             if operator == "=":
-                record = self.get_record(value)
+                record = self._get_record_in_node_with_key(leafNode, input_key)
                 return [record]  # in bytes
             elif operator == ">":
-                node = self._search_in_tree(value, self._root_node)
-                records = []
-                for record in node.entries:
-                    if record.key > value:
-                        records.append(self._get_value_from_record(record))
-                while node.next_page is not None:
-                    node = self._mem.get_node(node.next_page)
-                    for record in node.entries:
-                        if record.key > value:
-                            records.append(self._get_value_from_record(record))
-                return records
+                return self._get_records_left_right(input_key, leafNode, ">")
+            elif operator == ">=":
+                return self._get_records_left_right(input_key, leafNode, ">=")
+            elif operator == "<":
+                return self._get_records_right_left(input_key, leafNode, "<")
+            elif operator == "<=":
+                return self._get_records_right_left(input_key, leafNode, "<=")
             else:
                 raise ValueError("Not supported operator")
 
+    def _get_records_left_right(self, input_key, node, ops=">"):
+        records = []
+        for record in node.entries:
+            if utils.get_ops(record.key, input_key, ops):
+                records.append(self._get_value_from_record(record))
+        while node.next_page is not None:
+            node = self._mem.get_node(node.next_page)
+            for record in node.entries:
+                if utils.get_ops(record.key, input_key, ops):
+                    records.append(self._get_value_from_record(record))
+        return records
+
+    def _get_records_right_left(self, input_key, node, ops="<"):
+        records = []
+        for record in node.entries:
+            if utils.get_ops(record.key, input_key, ops):
+                records.append(self._get_value_from_record(record))
+        while node.prev_page is not None:
+            node = self._mem.get_node(node.prev_page)
+            for record in node.entries:
+                if utils.get_ops(record.key, input_key, ops):
+                    records.append(self._get_value_from_record(record))
+        return records
+    
+        
     def __contains__(self, item):
         with self._mem.read_transaction:
             o = object()
@@ -349,6 +373,10 @@ class BPlusTree:
                 return
 
     def _search_in_tree(self, key, node) -> "Node":
+        """Return node that MAY contain the key.
+            if the node does not contain the key, 
+            if we insert this new key, then the node should hold the key
+        """
         if isinstance(node, (LonelyRootNode, LeafNode)):
             return node
 

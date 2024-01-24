@@ -158,6 +158,8 @@ class Node(metaclass=abc.ABCMeta):
         self.entries.pop(self._find_entry_index(key))
 
     def get_entry(self, key) -> Entry:
+        """This function will loop through all the entries to find the key.
+        """
         return self.entries[self._find_entry_index(key)]
 
     def _find_entry_index(self, key) -> int:
