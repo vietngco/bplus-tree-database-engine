@@ -39,10 +39,10 @@ def insert_data():
             }
         )
 def primary_check():
-    for key, value in employee.tree.items(): 
+    for key, value in employee._tree.items(): 
         # print("record", key, value)
         pass 
-    print ("total lenght of the tree", len(employee.tree))
+    print ("total lenght of the tree", len(employee._tree))
     employee_json = employee.get_record(1)
     return employee_json
 
@@ -63,7 +63,7 @@ records = check_get_range()
 print("len of recoreds", len(records))
 for record in records:
     print_record(record)
-employee.tree.close()
+employee._tree.close()
 
 
 

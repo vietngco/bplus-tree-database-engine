@@ -24,7 +24,7 @@ class Schema:
         self.col_dict = {col.name: col for col in columns}
         self.record_length = sum([col.get_length() for col in columns])
         key_size = self.col_dict[key_col].get_length()
-        self.tree = BPlusTree(
+        self._tree = BPlusTree(
             "/tmp/" + table_name + ".db",
             key_size=key_size,
             value_size=self.record_length,
@@ -126,7 +126,7 @@ class Schema:
         self._validate_data_is_valid(data)
         # serlaize the data
         byte_record = self.serilize_record(data)
-        if len(byte_record) != self.record_length and len(byte_record)!= self.tree._tree_conf.value_size :
+        if len(byte_record) != self.record_length and len(byte_record)!= self._tree._tree_conf.value_size :
             raise ValueError("Something wrong with the serlization, Data length is not correct")
         # get the key index 
         key_value = data[self.key_col]
@@ -135,13 +135,13 @@ class Schema:
         if not isinstance(key_value, int):
             raise ValueError("not supported yet for other key type which is not int")
         # insert into the tree
-        self.tree.insert(key_value, byte_record)
+        self._tree.insert(key_value, byte_record)
         
 
     def get_record(self, key) -> dict:
         # find the key that match, may hvae scan the whole tree if hte column is not indexed
         
-        record_bytes = self.tree.get_record(key)
+        record_bytes = self._tree.get_record(key)
         if record_bytes is None:
             return None
         record = self.deserialize_record(record_bytes)
@@ -153,10 +153,10 @@ class Schema:
         records = []
         if operator == "=":
             # just return one value 
-            record = self.tree.get_record(value) # get single record 
+            record = self._tree.get_record(value) # get single record 
             records.append(record)
         else: 
-            records = self.tree.get_records(operator, value)
+            records = self._tree.get_records(operator, value)
             
         for  i, record  in enumerate( records): 
             records[i] = self.deserialize_record(record)
@@ -167,6 +167,8 @@ class Schema:
 
     def delete(self, key):
         pass
+    def close(self): 
+        self._tree.close()
 
 
 # for example: Schema("employee", [IntCol("id"), StrCol("name", 20), BoolCol("is_active"), FloatCol("salary"), DateTimeCol("created_at")])
