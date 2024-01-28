@@ -3,6 +3,7 @@ import struct
 
 from bplustree import BPlusTree
 from bplustree import IntSerializer
+from utils import check_ops
 
 
 class Schema:
@@ -156,7 +157,7 @@ class Schema:
         self._tree.insert(key_value, byte_record)
 
     def get_record(self, key) -> dict:
-        # find the key that match, may hvae scan the whole tree if hte column is not indexed
+        """Find the key that match, may hvae scan the whole tree if hte column is not indexed"""
 
         record_bytes = self._tree.get_record(key)
         if record_bytes is None:
@@ -166,6 +167,7 @@ class Schema:
 
     # any get function should be block with read access for entire during of transaction
     def get_records(self, operator: str, value) -> list:
+        check_ops(operator)
         key_col = self.col_dict[self.key_col]
         records = []
         if operator == "=":
@@ -179,9 +181,17 @@ class Schema:
             records[i] = self.deserialize_record(record)
         return records
 
-    def get_records_range(self, value1, op1, value2, op2) -> list:  
-        records = []
-        records = self._tree.get_records_range(value1, op1, value2, op2) 
+    def get_records_range(self, value1, op1, value2, op2) -> list:
+        if value1 is None or value2 is None:
+            raise ValueError("value1 and value2 can not be None")
+        if value1 > value2:
+            raise ValueError("value1 should be less than value2")
+        if op1 not in ["<", "<=", "="]:
+            raise ValueError("op1 is not supported")
+        if op2 not in [">", ">=", "="]:
+            raise ValueError("op2 is not supported")
+
+        records = self._tree.get_records_range(value1, op1, value2, op2)
         for i, record in enumerate(records):
             records[i] = self.deserialize_record(record)
         return records
@@ -199,3 +209,4 @@ class Schema:
 
 
 # for example: Schema("employee", [IntCol("id"), StrCol("name", 20), BoolCol("is_active"), FloatCol("salary"), DateTimeCol("created_at")])
+# TODO: CUSTOM INDEX

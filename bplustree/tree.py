@@ -207,6 +207,9 @@ class BPlusTree:
                 raise ValueError("Not supported operator")
 
     def get_records_range(self, value1, op1, value2, op2) -> list:
+        if (value1 > value2): 
+            raise ValueError("value_1 should be less than value_2")
+        
         with self._mem.read_transaction:
             leafNode = self._search_in_tree(value1, self._root_node)
             records = []

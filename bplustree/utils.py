@@ -42,3 +42,17 @@ def get_ops( key, input_key, op) -> bool:
             return key >= input_key 
         else:
             raise ValueError("Not supported operator =")
+        
+def check_ops(op):
+    if op == "=":
+        return True
+    elif op == "<": 
+        return True
+    elif op == ">": 
+        return True
+    elif op == "<=":
+        return True
+    elif op == ">=":
+        return True 
+    else:
+        raise ValueError("Not supported operator " + op)
