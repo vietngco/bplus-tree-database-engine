@@ -79,7 +79,7 @@ def test_get_data(s):
     assert record["note"] == "test10"
 
 
-def test_get_range(s):
+def test_bigger(s):
     s.batch_insert(get_data_to_insert(0, 10))
     assert len(s._tree) == 10
     records = s.get_records(">", 3)
@@ -87,10 +87,19 @@ def test_get_range(s):
     for record in records:
         assert record["id"] > 3
 
-def test_get_range_prev_page(s):
+def test_smaller(s):
     s.batch_insert(get_data_to_insert(0, 100))
     assert len(s._tree) == 100
     records = s.get_records("<", 3)
     assert len(records) == 3
     for record in records:
         assert record["id"] < 3
+
+def test_range(s): 
+    s.batch_insert(get_data_to_insert(0, 100))
+    assert len(s._tree) == 100
+    records = s.get_records_range(3, ">", 10, "<=")
+    assert len(records) == 7
+    for record in records:
+        assert record["id"] > 3 and record["id"] <= 10
+    

@@ -173,6 +173,7 @@ class BPlusTree:
         with self._mem.read_transaction:
             node = self._search_in_tree(key, self._root_node)
             return self._get_record_in_node_with_key(node, key, default)
+
     def _get_record_in_node_with_key(self, node, key, default=None):
         try:
             record = node.get_entry(key)
@@ -205,7 +206,25 @@ class BPlusTree:
             else:
                 raise ValueError("Not supported operator")
 
+    def get_records_range(self, value1, op1, value2, op2) -> list:
+        with self._mem.read_transaction:
+            leafNode = self._search_in_tree(value1, self._root_node)
+            records = []
+            records = self._get_records_range(value1, op1, value2, op2, leafNode)
+            return records
+            
+                
+        return []
+
+    def get_records_scan_full(self) -> list:
+        """ONly hte filter col is not key"""
+        return []
+
     def _get_records_left_right(self, input_key, node, ops=">"):
+        """Only call this function when we alerady find the leaf node"""
+        if not isinstance(node, (LonelyRootNode, LeafNode)):
+            raise ValueError("Not a leaf node")
+
         records = []
         for record in node.entries:
             if utils.get_ops(record.key, input_key, ops):
@@ -217,7 +236,32 @@ class BPlusTree:
                     records.append(self._get_value_from_record(record))
         return records
 
+    def _get_records_range(self, input_key1, op1, input_key2, op2, node):
+        """Only call this function when we alerady find the leaf node"""
+        # check if not leaf node
+        if not isinstance(node, (LonelyRootNode, LeafNode)):
+            raise ValueError("Not a leaf node")
+
+        records = []
+        for record in node.entries:
+            if utils.get_ops(record.key, input_key1, op1) and utils.get_ops(
+                record.key, input_key2, op2
+            ):
+                records.append(self._get_value_from_record(record))
+        while node.next_page is not None:
+            node = self._mem.get_node(node.next_page)
+            for record in node.entries:
+                if utils.get_ops(record.key, input_key1, op1) and utils.get_ops(
+                    record.key, input_key2, op2
+                ):
+                    records.append(self._get_value_from_record(record))
+        return records
+
     def _get_records_right_left(self, input_key, node, ops="<"):
+        """Only call this function when we alerady find the leaf node"""
+        if not isinstance(node, (LonelyRootNode, LeafNode)):
+            raise ValueError("Not a leaf node")
+
         records = []
         for record in node.entries:
             if utils.get_ops(record.key, input_key, ops):
@@ -228,8 +272,7 @@ class BPlusTree:
                 if utils.get_ops(record.key, input_key, ops):
                     records.append(self._get_value_from_record(record))
         return records
-    
-        
+
     def __contains__(self, item):
         with self._mem.read_transaction:
             o = object()
@@ -374,8 +417,8 @@ class BPlusTree:
 
     def _search_in_tree(self, key, node) -> "Node":
         """Return node that MAY contain the key.
-            if the node does not contain the key, 
-            if we insert this new key, then the node should hold the key
+        if the node does not contain the key,
+        if we insert this new key, then the node should hold the key
         """
         if isinstance(node, (LonelyRootNode, LeafNode)):
             return node

@@ -165,7 +165,7 @@ class Schema:
         return record
 
     # any get function should be block with read access for entire during of transaction
-    def get_records(self, operator, value) -> list:  # target column, operator, value
+    def get_records(self, operator: str, value) -> list:
         key_col = self.col_dict[self.key_col]
         records = []
         if operator == "=":
@@ -175,6 +175,13 @@ class Schema:
         else:
             records = self._tree.get_records(operator, value)
 
+        for i, record in enumerate(records):
+            records[i] = self.deserialize_record(record)
+        return records
+
+    def get_records_range(self, value1, op1, value2, op2) -> list:  
+        records = []
+        records = self._tree.get_records_range(value1, op1, value2, op2) 
         for i, record in enumerate(records):
             records[i] = self.deserialize_record(record)
         return records

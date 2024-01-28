@@ -388,3 +388,8 @@ def test_get_next_page(b):
     for entry in prev_node.entries:
         prev_keys.append(entry.key) 
     assert cur_keys == prev_keys
+
+def test_get_range(b): 
+    b.batch_insert([(i, str(i).encode()) for i in range(100)])
+    records = b.get_records_range(0, ">=", 10, "<=")
+    assert len(records) == 11
