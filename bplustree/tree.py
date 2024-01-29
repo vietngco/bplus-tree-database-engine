@@ -417,7 +417,8 @@ class BPlusTree:
                 node = self._mem.get_node(node.next_page)
             else:
                 return
-
+    # key can be composite key
+    # key can be an object 
     def _search_in_tree(self, key, node) -> "Node":
         """Return node that MAY contain the key.
         if the node does not contain the key,
@@ -427,7 +428,8 @@ class BPlusTree:
             return node
 
         page = None
-
+        print ("key", type(key))
+        print("smallest ket", type( node.smallest_key))
         if key < node.smallest_key:
             page = node.smallest_entry.before
 

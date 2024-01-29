@@ -21,7 +21,7 @@ def get_cols() -> list:
 
 columns = get_cols()
 employee = Schema(
-    table_name="employee2", columns=columns, key_col="id", custom_index=[], order=5
+    table_name="employee4", columns=columns, key_col="id", custom_index=["id"], order=5
 )
 
 
@@ -42,6 +42,8 @@ def insert_data():
 def primary_check():
     for key, value in employee._tree.items():
         # print("record", key, value)
+        # print class of key 
+        print("type of key", type(key))
         pass
     print("total lenght of the tree", len(employee._tree))
     employee_json = employee.get_record(1)

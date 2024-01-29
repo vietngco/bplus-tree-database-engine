@@ -455,6 +455,7 @@ class WAL:
             page = 0
         if frame_type is not FrameType.PAGE:
             page_data = b''
+        # data value is stored in the mem
         data = (
             frame_type.value.to_bytes(FRAME_TYPE_BYTES, ENDIAN) +
             page.to_bytes(PAGE_REFERENCE_BYTES, ENDIAN) +

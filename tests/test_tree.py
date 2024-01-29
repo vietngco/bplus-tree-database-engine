@@ -393,3 +393,4 @@ def test_get_range(b):
     b.batch_insert([(i, str(i).encode()) for i in range(100)])
     records = b.get_records_range(0, ">=", 10, "<=")
     assert len(records) == 11
+
