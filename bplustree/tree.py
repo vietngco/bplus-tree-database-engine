@@ -36,7 +36,7 @@ class BPlusTree:
         filename: str,
         page_size: int = 4096,
         order: int = 100,
-        key_size: int = 8,
+        key_size: int = 8, # 64 bit 
         value_size: int = 32,
         cache_size: int = 64,
         serializer: Optional[Serializer] = None,
@@ -95,7 +95,8 @@ class BPlusTree:
             except ValueError:
                 pass
             else:
-                if not replace:
+                # TO DO: get rid of this statement else ( need )
+                if not replace: # we never use this case for now in our db
                     raise ValueError("Key {} already exists".format(key))
 
                 if existing_record.overflow_page:
@@ -428,8 +429,6 @@ class BPlusTree:
             return node
 
         page = None
-        print ("key", type(key))
-        print("smallest ket", type( node.smallest_key))
         if key < node.smallest_key:
             page = node.smallest_entry.before
 
