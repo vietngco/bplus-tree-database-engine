@@ -11,26 +11,29 @@ def get_cols() -> list:
     is_active_col = BoolCol("is_active", nullable=False)  # 29
     salary_col = FloatCol("salary", nullable=False)  # 37
     created_at_col = DateTimeCol("created_at", nullable=False)  # 45
+    department_col = StrCol("department", 20, nullable=True, default="", unique=False)
     note = StrCol(
         "note", 20, nullable=True, default="", unique=False
     )  # 65 # total byte will 65
 
-    columns = [id_col, name_col, is_active_col, salary_col, created_at_col, note]
+    columns = [id_col, name_col, department_col, is_active_col, salary_col, created_at_col, note]
     return columns
-
 
 columns = get_cols()
 employee = Schema(
-    table_name="employee4", columns=columns, key_col="id", custom_index=["id"], order=5
+    table_name="employee6", columns=columns, custom_index=[ "department", "name", "id"], order=5
 )
 
 
 def insert_data():
-    for i in range(10, 20):
+    departments = ["HR", "IT", "Finance", "Marketing", "Sales"]
+    for i in range(0, 40):
+        department_val = departments[i % 5]
         employee.insert(
             {
-                "id": i,
                 "name": "John Doe" + str(i),
+                "department": department_val,  # "HR", "IT", "Finance", "Marketing", "Sales
+                "id": i,
                 "is_active": True,
                 "salary": 1000.0 + i,
                 "created_at": datetime.datetime.now(),
@@ -41,16 +44,22 @@ def insert_data():
 
 def primary_check():
     for key, value in employee._tree.items():
-        # print("record", key, value)
+        print("record", key, value)
         # print class of key 
-        print("type of key", type(key))
+        # print("type of key", type(key))
         pass
     print("total lenght of the tree", len(employee._tree))
-    employee_json = employee.get_record(1)
-    return employee_json
+    comp_key = employee.create_comp_key({
+        "department": "HR",
+        "name": "John Doe0",
+        "id": 0
+    })
+    employee_json = employee.get_record(comp_key)
+    print( employee_json)
 
 
 def check_small_larger():
+
     records = employee.get_records(">", 13)  # should return more than 10 reocords
     return records
 
@@ -66,17 +75,18 @@ def print_record(record):
     print("is_active", record["is_active"])
     print("salary", record["salary"])
     print("created_at", record["created_at"])
+    print("department", record["department"])
     print("note", record["note"])
     print("=====================================")
 
 
 # insert_data()
 single_record = primary_check()
-records1 = check_small_larger()
-print("check_small_larger: len of records ", len(records1))
+# records1 = check_small_larger()
+# print("check_small_larger: len of records ", len(records1))
 
-records2 = check_range()
-print("check_range: len of records ", len(records2))
+# records2 = check_range()
+# print("check_range: len of records ", len(records2))
 
 
 # close

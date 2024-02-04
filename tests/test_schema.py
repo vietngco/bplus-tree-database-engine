@@ -18,9 +18,11 @@ def get_cols() -> list:
 
     columns = [id_col, name_col, is_active_col, salary_col, created_at_col, note]
     return columns
-def get_data_to_insert(a,b): 
+
+
+def get_data_to_insert(a, b):
     data = []
-    if a >= b: 
+    if a >= b:
         raise ValueError("a should be less than b")
     for i in range(a, b):
         data.append(
@@ -35,6 +37,7 @@ def get_data_to_insert(a,b):
         )
     return data
 
+
 @pytest.fixture
 def s():
     s = Schema(
@@ -46,6 +49,18 @@ def s():
     )
     yield s
     s.close()
+
+
+@pytest.fixture
+def b():
+    b = Schema(
+        table_name=schema_name,
+        columns=get_cols(),
+        custom_index=["name", "id"],
+        order=5,
+    )
+    yield b
+    b.close()
 
 
 # @mock.patch('bplustree.tree.BPlusTree.close')
@@ -87,6 +102,7 @@ def test_bigger(s):
     for record in records:
         assert record["id"] > 3
 
+
 def test_smaller(s):
     s.batch_insert(get_data_to_insert(0, 100))
     assert len(s._tree) == 100
@@ -95,11 +111,41 @@ def test_smaller(s):
     for record in records:
         assert record["id"] < 3
 
-def test_range(s): 
+
+def test_range(s):
     s.batch_insert(get_data_to_insert(0, 100))
     assert len(s._tree) == 100
     records = s.get_records_range(3, ">", 10, "<=")
     assert len(records) == 7
     for record in records:
         assert record["id"] > 3 and record["id"] <= 10
-    
+
+
+def insert_data_with_comp_key(schema):
+    departments = ["HR", "IT", "Finance", "Marketing", "Sales"]
+    names = ["John Doe", "Jane Doe", "John Smith", "Jane Smith", "John Brown"]
+    for i in range(0, 40):
+        schema.insert(
+            {
+                "name": names[i % 5],
+                "department": departments[i % 5],
+                "id": i,
+                "is_active": True,
+                "salary": 1000.0 + i,
+                "created_at": datetime.now(),
+                "note": "test" + str(i),
+            }
+        )
+
+
+def test_comp_key_range(b):
+    insert_data_with_comp_key(b)
+    assert len(b._tree) == 40
+    comp_key = b.create_comp_key({ "name": "John Doe0", "id": 0})
+    record = b.get_record(comp_key)
+    assert record == None
+
+    comp_key = b.create_comp_key({ "name": "John Doe", "id": 0})
+    record = b.get_record(comp_key)
+    assert record["id"] == 0
+    assert record["name"] == "John Doe"

@@ -3,8 +3,10 @@ import struct
 
 from bplustree import BPlusTree
 from bplustree import IntSerializer, StrSerializer
-from . import utils
+from bplustree.serializer import CompKeySerializer
 from bplustree import const
+from . import utils
+from bplustree.column import Column, CompositeKey
 
 
 class Schema:
@@ -14,39 +16,42 @@ class Schema:
     def __init__(
         self,
         table_name: str,
-        columns: list,
-        key_col: str,
-        custom_index: list,
+        columns: list[Column],
+        custom_index: list[str],
         order: int,
+        key_col: str = None,
     ):
-        if len(columns) == 0:
+        if not columns:
             raise ValueError("Schema must have at least one column")
 
-        if key_col is None:
-            raise ValueError("Key column can not be None")
-        if custom_index is None:
-            custom_index = []
+        assert key_col or custom_index
 
-        self.key_col = key_col
         self.table_name = table_name
         self.columns = columns
         self.col_dict = {col.name: col for col in columns}
         self.record_length = sum([col.get_length() for col in columns])
 
-        self.key_serlizer = IntSerializer()
+        self.key_serlizer = IntSerializer()  # default serlizer
 
+        self.key_col = key_col
+
+        # set key size for the tree
         if len(custom_index) > 0:
-            self.key_serlizer = StrSerializer()
             self.key_size = sum(
                 [self.col_dict[col_name].get_length() for col_name in custom_index]
             )
-        else:
+            self.custom_index = custom_index
+            self.key_serlizer = CompKeySerializer(
+                [self.col_dict[col_name] for col_name in custom_index],
+                key_size=self.key_size,
+            )
+        else:  # single key
             key_type = self.col_dict[key_col].type
             self.key_size = self.col_dict[key_col].get_length()
 
-            if key_type == "int":
+            if key_type == const.INT_TYPE:
                 self.key_serlizer = IntSerializer()
-            elif key_type == "string":
+            elif key_type == const.STR_TYPE:
                 self.key_serlizer = StrSerializer()
             else:
                 raise ValueError(f"This Key type {key_type} is not supported yet")
@@ -79,29 +84,10 @@ class Schema:
                 raise ValueError("Column {} is not nullable".format(col.name))
 
     def _validate_data_is_valid(self, data: dict):
-        # check type
         for col in self.columns:
             if col.name not in data:
                 raise ValueError("Data is not complete")
-            if col.type == "int":
-                if not isinstance(data[col.name], int):
-                    raise ValueError("Data type is not correct")
-            elif col.type == "string":
-                if not isinstance(data[col.name], str):
-                    raise ValueError("Data type is not correct")
-                if len(data[col.name]) > col.length:
-                    raise ValueError("Data length is not correct")
-            elif col.type == "boolean":
-                if not isinstance(data[col.name], bool):
-                    raise ValueError("Data type is not correct")
-            elif col.type == "float":
-                if not isinstance(data[col.name], float):
-                    raise ValueError("Data type is not correct")
-            elif col.type == "datetime":
-                if not isinstance(data[col.name], datetime.datetime):
-                    raise ValueError("Data type is not correct")
-            else:
-                raise ValueError("Data type is not correct")
+            col.validate(data[col.name])
 
     def serilize_record(self, data: dict) -> bytes:
         bytes = b""
@@ -109,12 +95,29 @@ class Schema:
             bytes += col.serialize(data[col.name])
         return bytes
 
+    def _get_index_cols(self):
+        return [self.col_dict[col] for col in self.custom_index]
+
+    def create_comp_key(self, data: dict):
+        assert len(self.custom_index) == len(data.keys())
+        try:
+            return CompositeKey(
+                self._get_index_cols(), [data[col] for col in self.custom_index]
+            )
+        except KeyError as e:
+            missing_key = str(e)
+            raise ValueError(f"Missing key: {missing_key}")
+
     def deserialize_record(self, bytes: bytes) -> dict:
         data = {}
         start = 0
         for col in self.columns:
             length = col.get_length()
-            data[col.name] = col.deserialize(bytes[start : start + length])
+            try:
+                data[col.name] = col.deserialize(bytes[start : start + length])
+            except KeyError as e:
+                missing_key = col.name
+                raise ValueError(f"Missing key: {missing_key}")
             start += length
         return data
 
@@ -131,12 +134,21 @@ class Schema:
             raise ValueError(
                 "Something wrong with the serlization, Data length is not correct"
             )
+
         # get the key index
-        key_value = data[self.key_col]
+        key_value = None
+        if self.key_col:
+            key_value = data[self.key_col]
+        else:
+            index_cols = [self.col_dict[col] for col in self.custom_index]
+            index_values = [data[col] for col in self.custom_index]
+            key_value = CompositeKey(index_cols, index_values)
+
         if key_value is None:
             raise ValueError("Key value is None")
-        if not isinstance(key_value, int):
-            raise ValueError("not supported yet for other key type which is not int")
+        elif not (isinstance(key_value, int) or isinstance(key_value, CompositeKey)):
+            raise ValueError("Only support key value as INT or CompositeKey type")
+
         return key_value, byte_record
 
     def batch_insert(self, data_list: list[dict]):
@@ -155,6 +167,8 @@ class Schema:
             key = str(key)
         elif isinstance(self.key_serlizer, IntSerializer):
             key = int(key)
+        elif isinstance(self.key_serlizer, CompKeySerializer):
+            return key
         else:
             raise ValueError(
                 "not supported yet for other key type which is not int or string"
@@ -220,4 +234,13 @@ class Schema:
 
 
 # for example: Schema("employee", [IntCol("id"), StrCol("name", 20), BoolCol("is_active"), FloatCol("salary"), DateTimeCol("created_at")])
-# TODO: CUSTOM INDEX
+#  CUSTOM INDEX: doing
+# next step:
+# wrote test cases for the composite serlizer : done
+# write test cases for compsite : done
+# write test case for the serlizer with new compsite key : done
+# make sure to check the key_size : done
+# test with insert 
+# test with search one 
+# test with search range
+# will have more step here
