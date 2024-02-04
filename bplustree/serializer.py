@@ -7,11 +7,11 @@ try:
 except ImportError:
     temporenc = None
 
-from .const import ENDIAN
+from .const import ENDIAN, TreeConf
+from bplustree.column import CompositeKey, Column
 
 
 class Serializer(metaclass=abc.ABCMeta):
-
     __slots__ = []
 
     @abc.abstractmethod
@@ -23,11 +23,10 @@ class Serializer(metaclass=abc.ABCMeta):
         """Create a key object from bytes."""
 
     def __repr__(self):
-        return '{}()'.format(self.__class__.__name__)
+        return "{}()".format(self.__class__.__name__)
 
 
 class IntSerializer(Serializer):
-
     __slots__ = []
 
     def serialize(self, obj: int, key_size: int) -> bytes:
@@ -38,20 +37,18 @@ class IntSerializer(Serializer):
 
 
 class StrSerializer(Serializer):
-
     __slots__ = []
 
     def serialize(self, obj: str, key_size: int) -> bytes:
-        rv = obj.encode(encoding='utf-8')
+        rv = obj.encode(encoding="utf-8")
         assert len(rv) <= key_size
         return rv
 
     def deserialize(self, data: bytes) -> str:
-        return data.decode(encoding='utf-8')
+        return data.decode(encoding="utf-8")
 
 
 class UUIDSerializer(Serializer):
-
     __slots__ = []
 
     def serialize(self, obj: UUID, key_size: int) -> bytes:
@@ -62,27 +59,27 @@ class UUIDSerializer(Serializer):
 
 
 class DatetimeUTCSerializer(Serializer):
-
     __slots__ = []
 
     def __init__(self):
         if temporenc is None:
-            raise RuntimeError('Serialization to/from datetime needs the '
-                               'third-party library "temporenc"')
+            raise RuntimeError(
+                "Serialization to/from datetime needs the "
+                'third-party library "temporenc"'
+            )
 
     def serialize(self, obj: datetime, key_size: int) -> bytes:
         if obj.tzinfo is None:
-            raise ValueError('DatetimeUTCSerializer needs a timezone aware '
-                             'datetime')
-        return temporenc.packb(obj, type='DTS')
+            raise ValueError("DatetimeUTCSerializer needs a timezone aware " "datetime")
+        return temporenc.packb(obj, type="DTS")
 
     def deserialize(self, data: bytes) -> datetime:
         rv = temporenc.unpackb(data).datetime()
         rv = rv.replace(tzinfo=timezone.utc)
         return rv
 
-class FloatSerializer(Serializer):
 
+class FloatSerializer(Serializer):
     __slots__ = []
 
     def serialize(self, obj: float, key_size: int) -> bytes:
@@ -90,7 +87,7 @@ class FloatSerializer(Serializer):
 
     def deserialize(self, data: bytes) -> float:
         return float.from_bytes(data, ENDIAN)
-    
+
 
 class BooleanSerializer(Serializer):
     __slots__ = []
@@ -101,3 +98,24 @@ class BooleanSerializer(Serializer):
     def deserialize(self, data: bytes) -> bool:
         return bool(int.from_bytes(data, ENDIAN))
 
+
+class CompKeySerializer(Serializer):
+    __slots__ = ["columns", "key_size"]
+
+    def __init__(self, index_cols: list[Column], key_size: int) -> None:
+        self.columns = index_cols
+        self.key_size = key_size
+        super().__init__()
+
+    def serialize(self, obj: CompositeKey, key_size: int) -> bytes:
+        assert key_size == self.key_size  # check the key size input
+
+        data = obj.serialize()
+        assert len(data) == key_size
+        return data
+
+    def deserialize(self, data: bytes) -> CompositeKey:
+        assert len(data) == self.key_size
+
+        compositeKey = CompositeKey(self.columns)
+        return compositeKey.deserialize(data)

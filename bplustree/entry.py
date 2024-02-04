@@ -110,6 +110,9 @@ class Record(ComparableEntry):
         assert 0 <= used_key_length <= self._tree_conf.key_size
 
         end_key = end_used_key_length + used_key_length
+        
+        # from byte to object
+        # Ex: if object is composite key then byte to composite key
         self._key = self._tree_conf.serializer.deserialize(
             data[end_used_key_length:end_key]
         )

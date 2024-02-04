@@ -35,3 +35,9 @@ TreeConf = namedtuple('TreeConf', [
     'value_size',  # Maximum size of a value in bytes
     'serializer',  # Instance of a Serializer
 ])
+
+INT_TYPE = 1
+STR_TYPE = 2 
+FLOAT_TYPE  = 3 
+DATETIME_TYPE = 4
+BOOL_TYPE = 5
