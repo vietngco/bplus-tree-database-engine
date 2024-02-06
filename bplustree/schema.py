@@ -99,14 +99,13 @@ class Schema:
         return [self.col_dict[col] for col in self.custom_index]
 
     def create_comp_key(self, data: dict):
-        assert len(self.custom_index) == len(data.keys())
-        try:
-            return CompositeKey(
-                self._get_index_cols(), [data[col] for col in self.custom_index]
-            )
-        except KeyError as e:
-            missing_key = str(e)
-            raise ValueError(f"Missing key: {missing_key}")
+        values = []
+        for col in self.custom_index:
+            try:
+                values.append(data[col])
+            except KeyError as e:
+                values.append(None)
+        return CompositeKey(self._get_index_cols(), values)
 
     def deserialize_record(self, bytes: bytes) -> dict:
         data = {}
@@ -197,6 +196,8 @@ class Schema:
             records.append(record)
         else:
             records = self._tree.get_records(operator, value)
+            if  records and self.custom_index and (operator == ">" or operator == "<"):
+                records = records[1:]
 
         for i, record in enumerate(records):
             records[i] = self.deserialize_record(record)
@@ -240,8 +241,8 @@ class Schema:
 # write test cases for compsite : done
 # write test case for the serlizer with new compsite key : done
 # make sure to check the key_size : done
-# test with insert : done 
-# test with search one : done 
-# test with search range: done 
-# will have more step here: 
-    # for custom key: we should be able to filter by partial key
+# test with insert : done
+# test with search one : done
+# test with search range: done
+# will have more step here:
+# for custom key: we should be able to filter by partial key

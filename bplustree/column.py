@@ -154,7 +154,8 @@ class CompositeKey:
             self.values = values
             assert len(self.values) == len(self.columns)
             for i, col  in enumerate(self.columns): 
-                col.validate(self.values[i])
+                if self.values[i] is not None:
+                    col.validate(self.values[i])
 
         
 
@@ -162,6 +163,8 @@ class CompositeKey:
         if not isinstance(__obj, CompositeKey):
             return NotImplemented
         for i, value in enumerate(self.values):
+            if value is None or __obj.values[i] is None:
+                continue 
             if value != __obj.values[i]:
                 return False
         return True
@@ -173,11 +176,15 @@ class CompositeKey:
         if not isinstance(__obj, CompositeKey):
             return NotImplemented
         for i, value in enumerate(self.values):
+            if value is None: 
+                return True
+            if __obj.values[i] is None: # for partial key 
+                return False
             if value < __obj.values[i]:
                 return True
             elif value > __obj.values[i]:
                 return False
-
+            
     def __le__(self, __obj: object) -> bool:
         equal = self.__eq__(__obj)
         if equal:
@@ -191,6 +198,10 @@ class CompositeKey:
         if not isinstance(__obj, CompositeKey):
             return NotImplemented
         for i, value in enumerate(self.values):
+            if value is None: 
+                return False
+            if __obj.values[i] is None: # for partial key 
+                return True
             if value > __obj.values[i]:
                 return True
             elif value < __obj.values[i]:

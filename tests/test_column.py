@@ -104,3 +104,15 @@ def test_compkey():
     # test smaller
     assert ck2 > ck
     assert ck2 >= ck
+
+
+def test_partial_comp_key():
+    int_col = IntCol("id", unique=True, nullable=False)
+    str_col = StrCol("name", length=20)
+    ck = CompositeKey(columns=[int_col, str_col], values=[42, "foo"])
+    ck2 = CompositeKey(columns=[int_col, str_col], values=[42, None])
+    # test smaller
+    assert ck2 < ck
+    assert ck2 <= ck
+    assert ck > ck2
+    assert ck >= ck2

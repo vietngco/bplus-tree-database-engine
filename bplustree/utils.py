@@ -33,7 +33,7 @@ def iter_slice(iterable: bytes, n: int):
 
 def get_ops( key, input_key, op) -> bool:
         if op == "<": 
-            return key < input_key
+            return key < input_key #  0, john < 0 , None
         elif op == ">": 
             return key > input_key
         elif op == "<=":

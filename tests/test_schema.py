@@ -62,6 +62,7 @@ def b():
     yield b
     b.close()
 
+
 @pytest.fixture
 def o():
     b = Schema(
@@ -127,10 +128,10 @@ def test_range(s):
         assert record["id"] > 3 and record["id"] <= 10
 
 
-def insert_data_with_comp_key(schema):
+def insert_data_with_comp_key(schema, a=0, b=40):
     departments = ["HR", "IT", "Finance", "Marketing", "Sales"]
     names = ["John Doe", "Jane Doe", "John Smith", "Jane Smith", "John Brown"]
-    for i in range(0, 40):
+    for i in range(a, b):
         schema.insert(
             {
                 "name": names[i % 5],
@@ -145,31 +146,64 @@ def insert_data_with_comp_key(schema):
 
 
 def test_comp_key_range(b):
-    insert_data_with_comp_key(b)
-    assert len(b._tree) == 40
-    comp_key = b.create_comp_key({ "name": "not found", "id": 0})
+    insert_data_with_comp_key(b, 0, 10)
+    assert len(b._tree) == 10
+    comp_key = b.create_comp_key({"name": "not found", "id": 0})
     record = b.get_record(comp_key)
     assert record == None
 
-    comp_key = b.create_comp_key({ "name": "John Doe", "id": 0})
+    comp_key = b.create_comp_key({"name": "John Doe", "id": 0})
     record = b.get_record(comp_key)
     assert record["id"] == 0
     assert record["name"] == "John Doe"
-    
+
+
 def test_comp_key_range_2(o):
     insert_data_with_comp_key(o)
-    comp_key = o.create_comp_key({ "name": "John Doe", "id": 0})
-    records = o.get_records(">",  comp_key)
+    comp_key = o.create_comp_key({"name": "John Doe", "id": 0})
+    records = o.get_records(">", comp_key)
     assert len(records) == 39
-    for record in records: 
-        assert record['id'] > 0
+    for record in records:
+        assert record["id"] > 0
+
 
 def test_comp_key_range_3(o):
     insert_data_with_comp_key(o)
-    comp_key = o.create_comp_key({ "name": "John Doe", "id": 0})
-    com_key2 = o.create_comp_key({ 'id': 26, 'name': 'Jane Doe'})
+    comp_key = o.create_comp_key({"name": "John Doe", "id": 0})
+    com_key2 = o.create_comp_key({"id": 26, "name": "Jane Doe"})
     records = o.get_records_range(comp_key, ">", com_key2, "<=")
-    assert len(records) == 26 
-    for record in records: 
-        assert record['id'] > 0 and record['id'] <= 26
-   
+    assert len(records) == 26
+    for record in records:
+        assert record["id"] > 0 and record["id"] <= 26
+
+
+def test_partial_com_key_range(o):
+    insert_data_with_comp_key(o)
+    comp_key = o.create_comp_key({"id": 0})
+    records = o.get_records(">", comp_key)
+    assert len(records) == 39
+    comp_key = o.create_comp_key({"id": 39})
+    records = o.get_records("<", comp_key)
+    assert len(records) == 39
+
+    comp_key = o.create_comp_key({"id": 0})
+    records = o.get_records("<", comp_key)
+    assert len(records) == 0
+
+
+def test_partial_com_key_range_2(o):
+    insert_data_with_comp_key(o)
+    comp_key = o.create_comp_key({"id": 0})
+    comp_key_2 = o.create_comp_key({"id": 15})
+
+    records = o.get_records_range(comp_key, ">", comp_key_2, "<=")
+    assert len(records) == 15
+
+    records = o.get_records_range(comp_key, ">", comp_key_2, "<")
+    assert len(records) == 14
+
+    records = o.get_records_range(comp_key, ">=", comp_key_2, "<")
+    assert len(records) == 15
+
+    records = o.get_records_range(comp_key, ">=", comp_key_2, "<=")
+    assert len(records) == 16

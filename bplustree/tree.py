@@ -261,19 +261,19 @@ class BPlusTree:
                     records.append(self._get_value_from_record(record))
         return records
 
-    def _get_records_right_left(self, input_key, node, ops="<"):
+    def _get_records_right_left(self, input_key, node, op="<"):
         """Only call this function when we alerady find the leaf node"""
         if not isinstance(node, (LonelyRootNode, LeafNode)):
             raise ValueError("Not a leaf node")
 
         records = []
         for record in node.entries:
-            if utils.get_ops(record.key, input_key, ops):
+            if utils.get_ops(record.key, input_key, op):
                 records.append(self._get_value_from_record(record))
         while node.prev_page is not None:
             node = self._mem.get_node(node.prev_page)
             for record in node.entries:
-                if utils.get_ops(record.key, input_key, ops):
+                if utils.get_ops(record.key, input_key, op):
                     records.append(self._get_value_from_record(record))
         return records
 
@@ -431,14 +431,21 @@ class BPlusTree:
         page = None
         if key < node.smallest_key:
             page = node.smallest_entry.before
-
+            # print(1)
+# 
         elif node.biggest_key <= key:
             page = node.biggest_entry.after
-
+            # print(2)
         else:
+            # print(key.values)
             for ref_a, ref_b in utils.pairwise(node.entries):
+                # print(ref_a.key, ref_b.key)
+                # print(ref_a.key.values, ref_b.key.values)
+                # print(ref_a.key <= key )
+                # print( key <  ref_b.key)
                 if ref_a.key <= key < ref_b.key:
                     page = ref_a.after
+                    # print(3)
                     break
 
         assert page is not None
