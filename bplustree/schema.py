@@ -240,7 +240,8 @@ class Schema:
 # write test cases for compsite : done
 # write test case for the serlizer with new compsite key : done
 # make sure to check the key_size : done
-# test with insert 
-# test with search one 
-# test with search range
-# will have more step here
+# test with insert : done 
+# test with search one : done 
+# test with search range: done 
+# will have more step here: 
+    # for custom key: we should be able to filter by partial key

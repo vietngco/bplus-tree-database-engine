@@ -62,12 +62,18 @@ def b():
     yield b
     b.close()
 
+@pytest.fixture
+def o():
+    b = Schema(
+        table_name=schema_name,
+        columns=get_cols(),
+        custom_index=["id", "name"],
+        order=5,
+    )
+    yield b
+    b.close()
 
-# @mock.patch('bplustree.tree.BPlusTree.close')
-# def test_closing_context_manager(mock_close):
-#     with BPlusTree(filename, page_size=512, value_size=128) as b:
-#         pass
-#     mock_close.assert_called_once_with()
+
 def test_insert_data(s):
     for i in range(10, 20):
         s.insert(
@@ -141,7 +147,7 @@ def insert_data_with_comp_key(schema):
 def test_comp_key_range(b):
     insert_data_with_comp_key(b)
     assert len(b._tree) == 40
-    comp_key = b.create_comp_key({ "name": "John Doe0", "id": 0})
+    comp_key = b.create_comp_key({ "name": "not found", "id": 0})
     record = b.get_record(comp_key)
     assert record == None
 
@@ -149,3 +155,21 @@ def test_comp_key_range(b):
     record = b.get_record(comp_key)
     assert record["id"] == 0
     assert record["name"] == "John Doe"
+    
+def test_comp_key_range_2(o):
+    insert_data_with_comp_key(o)
+    comp_key = o.create_comp_key({ "name": "John Doe", "id": 0})
+    records = o.get_records(">",  comp_key)
+    assert len(records) == 39
+    for record in records: 
+        assert record['id'] > 0
+
+def test_comp_key_range_3(o):
+    insert_data_with_comp_key(o)
+    comp_key = o.create_comp_key({ "name": "John Doe", "id": 0})
+    com_key2 = o.create_comp_key({ 'id': 26, 'name': 'Jane Doe'})
+    records = o.get_records_range(comp_key, ">", com_key2, "<=")
+    assert len(records) == 26 
+    for record in records: 
+        assert record['id'] > 0 and record['id'] <= 26
+   
